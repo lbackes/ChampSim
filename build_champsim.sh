@@ -24,6 +24,10 @@ embed_newline()
 
 # Sanity check
 if [ ! -f ./branch/${BRANCH}.bpred ] || [ ! -f ./prefetcher/${L1D_PREFETCHER}.l1d_pref ] || [ ! -f ./prefetcher/${L2C_PREFETCHER}.l2c_pref ] || [ ! -f ./replacement/${LLC_REPLACEMENT}.llc_repl ]; then
+
+    echo "$0 branch_predictor l1d_pf l2c_pf llc_repl num_cores"
+    echo
+
 	echo "${BOLD}Possible Branch Predictor: ${NORMAL}"
 	LIST=$(ls branch/*.bpred | cut -d '/' -f2 | cut -d '.' -f1)
 	p=$( embed_newline $LIST )
@@ -65,6 +69,7 @@ cp branch/${BRANCH}.bpred branch/branch_predictor.cc
 cp prefetcher/${L1D_PREFETCHER}.l1d_pref prefetcher/l1d_prefetcher.cc
 cp prefetcher/${L2C_PREFETCHER}.l2c_pref prefetcher/l2c_prefetcher.cc
 cp replacement/${LLC_REPLACEMENT}.llc_repl replacement/llc_replacement.cc
+sed -i 's/#define NUM_CPUS.*/#define NUM_CPUS '${NUM_CORE}'/g' inc/champsim.h
 
 # Build
 mkdir -p bin
@@ -93,7 +98,7 @@ mv bin/champsim bin/${BINARY_NAME}
 
 
 # Restore to the default configuration
-sed -i.bak 's/\<NUM_CPUS '${NUM_CORE}'\>/NUM_CPUS 1/g' inc/champsim.h
+#sed -i.bak 's/\<NUM_CPUS '${NUM_CORE}'\>/NUM_CPUS 1/g' inc/champsim.h
 sed -i.bak 's/\<DRAM_CHANNELS 2\>/DRAM_CHANNELS 1/g' inc/champsim.h
 sed -i.bak 's/\<DRAM_CHANNELS_LOG2 1\>/DRAM_CHANNELS_LOG2 0/g' inc/champsim.h
 
