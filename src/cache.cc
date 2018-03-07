@@ -300,13 +300,49 @@ void CACHE::handle_writeback()
                 if (cache_type == IS_LLC) {
                     way = llc_find_victim(writeback_cpu, WQ.entry[index].instr_id, set, block[set], WQ.entry[index].ip, WQ.entry[index].full_addr, WQ.entry[index].type);
                 }
-                else
+                else {
                     way = find_victim(writeback_cpu, WQ.entry[index].instr_id, set, block[set], WQ.entry[index].ip, WQ.entry[index].full_addr, WQ.entry[index].type);
+                }
 
 #ifdef LLC_BYPASS
                 if ((cache_type == IS_LLC) && (way == LLC_WAY)) {
-                    cerr << "LLC bypassing for writebacks is not allowed!" << endl;
-                    assert(0);
+                    //cerr << "LLC bypassing for writebacks is not allowed!" << endl;
+                    //assert(0);
+                    // check if the lower level WQ has enough room to
+                    //keep this writeback request
+                    if (lower_level) {
+                        if (lower_level->get_occupancy(2,
+                            block[set][way].address) == lower_level->get_size(2,
+                            block[set][way].address)) {
+                            
+                            lower_level->increment_WQ_FULL(block[set][way].address);
+                            STALL[WQ.entry[index].type]++;
+
+                            DP ( if (warmup_complete[writeback_cpu]) {
+                            cout << "[" << NAME << "] " << __func__ <<
+                                    "do_fill: " << +do_fill;
+                            cout << " lower level wq is full!" <<
+                                    "fill_addr: " << hex << WQ.entry[index].address;
+                            cout << " victim_addr: " <<
+                                    block[set][way].tag << dec << endl; });
+                        } else {
+                            PACKET writeback_packet;
+
+                            writeback_packet.fill_level = fill_level << 1;
+                            writeback_packet.cpu = writeback_cpu;
+                            writeback_packet.address = block[set][way].address;
+                            writeback_packet.full_addr = block[set][way].full_addr;
+                            writeback_packet.data = block[set][way].data;
+                            writeback_packet.instr_id = WQ.entry[index].instr_id;
+                            writeback_packet.ip = 0;
+                            writeback_packet.type = WRITEBACK;
+                            writeback_packet.event_cycle = current_core_cycle[writeback_cpu];
+
+                            lower_level->add_wq(&writeback_packet);
+                        }
+                        update_fill_cycle();
+                        return; // return here, no need to process further in this function
+                    }
                 }
 #endif
 
