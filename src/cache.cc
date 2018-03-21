@@ -262,7 +262,7 @@ void CACHE::handle_writeback()
                         if (MSHR.entry[mshr_index].type == PREFETCH) {
                             uint8_t  prior_returned = MSHR.entry[mshr_index].returned;
                             uint64_t prior_event_cycle = MSHR.entry[mshr_index].event_cycle;
-			    MSHR.entry[mshr_index] = WQ.entry[index];
+			                MSHR.entry[mshr_index] = WQ.entry[index];
 
                             // in case request is already returned, we should keep event_cycle and retunred variables
                             MSHR.entry[mshr_index].returned = prior_returned;
@@ -308,6 +308,10 @@ void CACHE::handle_writeback()
                 if ((cache_type == IS_LLC) && (way == LLC_WAY)) {
                     //cerr << "LLC bypassing for writebacks is not allowed!" << endl;
                     //assert(0);
+
+                    //check read miss pending
+
+
                     // check if the lower level WQ has enough room to
                     //keep this writeback request
                     if (lower_level) {
@@ -339,6 +343,7 @@ void CACHE::handle_writeback()
                             writeback_packet.event_cycle = current_core_cycle[writeback_cpu];
 
                             lower_level->add_wq(&writeback_packet);
+                            WQ.remove_queue(&WQ.entry[index]);
                         }
                         update_fill_cycle();
                         return; // return here, no need to process further in this function
